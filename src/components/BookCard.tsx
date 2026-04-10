@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, User, Calendar, Star } from 'lucide-react';
+import { BookOpen, User, Star } from 'lucide-react';
 import type { Book } from '../types';
 
 interface BookCardProps {

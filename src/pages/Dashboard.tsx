@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BookOpen, Clock, CheckCircle, AlertTriangle, ArrowRight, Calendar } from 'lucide-react';
@@ -7,6 +7,9 @@ import Footer from '../components/Footer';
 import { useAuthContext } from '../context/AuthContext';
 import { MOCK_BORROWED } from '../data/mockData';
 import { format } from 'date-fns';
+import type { SupabaseIssue } from '../types';
+import { listIssuesForStudent } from '../services/issueService';
+import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 const STATUS_CONFIG = {
   active: { label: 'Active', color: 'text-[hsl(200,80%,60%)] bg-[hsl(200,80%,60%)]/10 border-[hsl(200,80%,60%)]/20' },
@@ -18,6 +21,20 @@ export default function Dashboard() {
   const { user } = useAuthContext();
   const myBooks = MOCK_BORROWED.filter((b) => b.memberId === user?.id);
   const allBooks = MOCK_BORROWED;
+  const [studentIssues, setStudentIssues] = useState<SupabaseIssue[]>([]);
+
+  useEffect(() => {
+    const loadIssues = async () => {
+      if (!isSupabaseConfigured || !user?.id || user.role === 'member') return;
+      try {
+        const data = await listIssuesForStudent(user.id);
+        setStudentIssues(data);
+      } catch {
+        setStudentIssues([]);
+      }
+    };
+    loadIssues();
+  }, [user?.id, user?.role]);
 
   const active = allBooks.filter((b) => b.status === 'active').length;
   const overdue = allBooks.filter((b) => b.status === 'overdue').length;
@@ -92,7 +109,34 @@ export default function Dashboard() {
               </div>
 
               <div className="space-y-3">
-                {myBooks.length === 0 ? (
+                {studentIssues.map((issue) => (
+                  <div
+                    key={`supabase-${issue.id}`}
+                    className="flex items-center gap-4 p-4 bg-[hsl(220,18%,10%)] border border-[hsl(220,15%,18%)] rounded-xl"
+                  >
+                    <img
+                      src={issue.book?.image || 'https://via.placeholder.com/44x60?text=Book'}
+                      alt={issue.book?.title || 'Book cover'}
+                      width={44}
+                      height={60}
+                      className="w-11 h-14 object-cover rounded-lg border border-[hsl(220,15%,20%)] flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-white truncate">{issue.book?.title || 'Untitled book'}</h3>
+                      <p className="text-xs text-[hsl(220,10%,50%)] mt-0.5">Supabase issue record</p>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <Calendar className="w-3 h-3 text-[hsl(220,10%,40%)]" />
+                        <span className="text-xs text-[hsl(220,10%,45%)]">
+                          Issued {format(new Date(issue.issue_date), 'MMM d, yyyy')}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 text-xs font-medium rounded-full border text-[hsl(200,80%,60%)] bg-[hsl(200,80%,60%)]/10 border-[hsl(200,80%,60%)]/20">
+                      {issue.return_date ? 'Returned' : 'Active'}
+                    </span>
+                  </div>
+                ))}
+                {myBooks.length === 0 && studentIssues.length === 0 ? (
                   <div className="bg-[hsl(220,18%,10%)] border border-[hsl(220,15%,18%)] rounded-xl p-8 text-center">
                     <BookOpen className="w-8 h-8 text-[hsl(220,10%,35%)] mx-auto mb-3" />
                     <p className="text-sm text-[hsl(220,10%,50%)]">No books borrowed yet.</p>

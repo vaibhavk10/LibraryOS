@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   BookOpen, Users, BarChart3, Shield, Search, Bell,
-  ArrowRight, CheckCircle, Star, Zap, Globe, Lock
+  ArrowRight, CheckCircle, Star, Zap, Globe
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';

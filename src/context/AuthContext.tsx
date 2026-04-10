@@ -6,8 +6,16 @@ interface AuthContextValue {
   user: Member | null;
   loading: boolean;
   error: string | null;
+  emailVerified: boolean;
   login: (email: string, password: string) => Promise<Member | null>;
-  logout: () => void;
+  signup: (payload: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+  }) => Promise<{ ok: true } | { ok: false; message: string }>;
+  verifyCode: (email: string, code: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -17,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuthContext() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuthContext must be used within AuthProvider');

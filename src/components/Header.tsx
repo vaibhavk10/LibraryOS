@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, Menu, X, LogOut, User, LayoutDashboard, Library, Users } from 'lucide-react';
+import { BookOpen, Menu, X, LogOut, User, LayoutDashboard, Library } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthContext } from '../context/AuthContext';
 
@@ -27,8 +27,8 @@ export default function Header() {
     setMobileOpen(false);
   }, [location.pathname]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
 
@@ -106,7 +106,7 @@ export default function Header() {
                   Sign In
                 </Link>
                 <Link
-                  to="/login"
+                  to="/signup"
                   className="px-5 py-2 text-sm font-semibold bg-[hsl(45,90%,55%)] text-[hsl(220,20%,8%)] rounded-lg hover:bg-[hsl(45,90%,62%)] hover:scale-105 transition-all duration-200"
                 >
                   Get Started
@@ -178,7 +178,7 @@ export default function Header() {
                       Sign In
                     </Link>
                     <Link
-                      to="/login"
+                      to="/signup"
                       className="px-4 py-3 text-sm font-semibold bg-[hsl(45,90%,55%)] text-[hsl(220,20%,8%)] rounded-lg text-center hover:bg-[hsl(45,90%,62%)] transition-all duration-200"
                     >
                       Get Started

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Filter, BookOpen } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -11,15 +11,38 @@ import EmptyState from '../components/EmptyState';
 import { useOpenLibrary } from '../hooks/useOpenLibrary';
 import { CATEGORIES } from '../data/mockData';
 import type { Book } from '../types';
+import type { SupabaseBook } from '../types';
+import { addBookFromCatalog, listBooks } from '../services/bookService';
+import { requestIssue } from '../services/issueService';
+import { useAuthContext } from '../context/AuthContext';
+import { isSupabaseConfigured } from '../lib/supabaseClient';
+import { upsertStudentProfile } from '../services/authService';
+
+type CatalogBook = Book & { source: 'openlibrary' | 'supabase'; supabaseId?: string };
 
 export default function Catalog() {
   const { books, loading, error, total, searchBooks, fetchFeatured } = useOpenLibrary();
+  const { user } = useAuthContext();
   const [activeCategory, setActiveCategory] = useState('fiction');
   const [hasSearched, setHasSearched] = useState(false);
+  const [supabaseBooks, setSupabaseBooks] = useState<SupabaseBook[]>([]);
 
   useEffect(() => {
     fetchFeatured('fiction');
   }, [fetchFeatured]);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!isSupabaseConfigured) return;
+      try {
+        const data = await listBooks();
+        setSupabaseBooks(data);
+      } catch {
+        toast.error('Unable to load Supabase books. Showing existing catalog.');
+      }
+    };
+    load();
+  }, []);
 
   const handleSearch = (query: string) => {
     setHasSearched(true);
@@ -33,9 +56,65 @@ export default function Catalog() {
     fetchFeatured(value);
   };
 
-  const handleBorrow = (book: Book) => {
+  const handleBorrow = async (book: CatalogBook) => {
+    if (!user) {
+      toast.info('Please sign in to request this book.');
+      return;
+    }
+
+    if (user.role === 'admin') {
+      toast.info('Admin accounts cannot create student borrowing requests.');
+      return;
+    }
+
+    if (isSupabaseConfigured) {
+      try {
+        await upsertStudentProfile({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+        });
+
+        const resolvedBookId =
+          book.source === 'supabase' && book.supabaseId
+            ? book.supabaseId
+            : (
+                await addBookFromCatalog({
+                  title: book.title,
+                  image: book.cover_i
+                    ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`
+                    : undefined,
+                })
+              ).id;
+
+        await requestIssue({ studentId: user.id, bookId: resolvedBookId });
+        toast.success(`"${book.title}" issue request submitted.`);
+      } catch {
+        toast.error('Unable to request issue right now.');
+      }
+      return;
+    }
+
     toast.success(`"${book.title}" added to your borrow list!`);
   };
+
+  const supaAsBooks: CatalogBook[] = supabaseBooks.map((book) => ({
+    key: `supabase:${book.id}`,
+    title: book.title,
+    cover_i: undefined,
+    subject: ['Supabase'],
+    source: 'supabase',
+    supabaseId: book.id,
+    author_name: ['Library Admin'],
+  }));
+
+  const openLibraryBooks: CatalogBook[] = books.map((book) => ({
+    ...book,
+    source: 'openlibrary',
+  }));
+
+  const allBooks = [...openLibraryBooks, ...supaAsBooks];
 
   return (
     <div className="min-h-screen bg-[hsl(220,20%,7%)] text-white">
@@ -89,12 +168,12 @@ export default function Catalog() {
         {/* Results */}
         <section className="py-12">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            {!loading && books.length > 0 && (
+            {!loading && allBooks.length > 0 && (
               <div className="flex items-center justify-between mb-8">
                 <p className="text-sm text-[hsl(220,10%,50%)]">
                   {hasSearched
                     ? `Found ${total.toLocaleString()} results`
-                    : `Showing ${activeCategory} books`}
+                    : `Showing ${activeCategory} books + Supabase library`}
                 </p>
                 <span className="text-xs text-[hsl(220,10%,40%)] bg-[hsl(220,18%,10%)] border border-[hsl(220,15%,18%)] px-3 py-1.5 rounded-lg">
                   Powered by Open Library
@@ -119,16 +198,16 @@ export default function Catalog() {
               />
             )}
 
-            {!loading && !error && books.length === 0 && (
+            {!loading && !error && allBooks.length === 0 && (
               <EmptyState
                 title="No books found"
                 description="Try a different search term or browse by category."
               />
             )}
 
-            {!loading && !error && books.length > 0 && (
+            {!loading && !error && allBooks.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {books.map((book, i) => (
+                {allBooks.map((book, i) => (
                   <BookCard key={book.key + i} book={book} onBorrow={handleBorrow} index={i} />
                 ))}
               </div>

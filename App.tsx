@@ -12,6 +12,7 @@ import LoadingSpinner from './src/components/LoadingSpinner';
 
 const Home = lazy(() => import('./src/pages/Home'));
 const Login = lazy(() => import('./src/pages/Login'));
+const Signup = lazy(() => import('./src/pages/Signup'));
 const Catalog = lazy(() => import('./src/pages/Catalog'));
 const Dashboard = lazy(() => import('./src/pages/Dashboard'));
 const Admin = lazy(() => import('./src/pages/Admin'));
@@ -23,7 +24,7 @@ const App: React.FC = () => {
   return (
     <Theme appearance="inherit" radius="large" scaling="100%">
       <AuthProvider>
-        <Router>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Suspense fallback={
             <div className="min-h-screen bg-[hsl(220,20%,7%)] flex items-center justify-center">
               <LoadingSpinner message="Loading LibraryOS…" />
@@ -32,6 +33,7 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
               <Route path="/catalog" element={<Catalog />} />
               <Route path="/features" element={<Features />} />
               <Route path="/pricing" element={<Pricing />} />
